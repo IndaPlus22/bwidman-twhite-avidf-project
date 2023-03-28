@@ -8,8 +8,10 @@ Project: https://github.com/orgs/IndaPlus22/projects/6
 
 Commit messages will be in future tense, like:
 > Fix this bug
+
 Pull requests will be named after its associated issue, like:
 > #13, Improve performance
+
 For the Rust code, regular Rust naming conventions will be used according to its [style guide](https://github.com/rust-dev-tools/fmt-rfcs/blob/master/guide/guide.md) and [documentation](https://doc.rust-lang.org/rustdoc/what-is-rustdoc.html).
 
 ## Description
