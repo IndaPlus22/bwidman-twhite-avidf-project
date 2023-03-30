@@ -69,7 +69,7 @@ fn main() {
 
 
     //Mouse position
-    
+    // *****Still having debugger issues so sorry for any issues!!!!! (to be removed)
     let mut mouse_pos: [f64; 2] = [0.0, 0.0];
 
     while let Some(event) = window.next() {
