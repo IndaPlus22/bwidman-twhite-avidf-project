@@ -67,6 +67,7 @@ fn main() {
         rotation: 0.0,
     };
 
+    //Mouse position
     while let Some(event) = window.next() {
         if let Some(pos) = event.mouse_cursor_args() {
             mouse_pos = pos;
