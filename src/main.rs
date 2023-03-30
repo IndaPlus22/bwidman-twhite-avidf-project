@@ -67,6 +67,24 @@ fn main() {
         rotation: 0.0,
     };
 
+    while let Some(event) = window.next() {
+        if let Some(pos) = event.mouse_cursor_args() {
+            mouse_pos = pos;
+        }
+        
+        window.draw_2d(&event, |context, graphics| {
+            // clear the screen 
+            clear([0.0, 0.0, 0.0, 1.0], graphics); 
+            
+            // create a circular hue at the current mouse position
+            ellipse([1.0, 0.0, 0.0, 1.0], // currently red
+                    [mouse_pos[0]-10.0, mouse_pos[1]-10.0, 20.0, 20.0], 
+                    context.transform,
+                    graphics);
+        });
+
+    }
+
     // Event loop
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
