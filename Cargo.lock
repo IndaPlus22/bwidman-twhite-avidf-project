@@ -107,6 +107,7 @@ checksum = "0d261e256854913907f67ed06efbc3338dfe6179796deefc1ff763fc1aee5535"
 name = "bwidman-twhite-avidf-project"
 version = "0.1.0"
 dependencies = [
+ "image",
  "piston",
  "piston2d-graphics",
  "piston2d-opengl_graphics",

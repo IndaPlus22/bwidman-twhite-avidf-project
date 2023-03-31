@@ -2,57 +2,61 @@ extern crate glutin_window;
 extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
+extern crate image;
 
 use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{GlGraphics, OpenGL};
+use opengl_graphics::{GlGraphics, OpenGL, Texture, TextureSettings, Filter};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent, MouseCursorEvent};
 use piston::window::WindowSettings;
 
-const WINDOW_WIDTH: u32 = 1280;
-const WINDOW_HEIGHT: u32 = 720;
+const WINDOW_WIDTH: u32 = 500;
+const WINDOW_HEIGHT: u32 = 500;
+const PIXEL_SCALE: u32 = 1; // How big every pixel should be (1 is normal)
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
-    rotation: f64,  // Rotation for the square.
+    frame_buffer: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+    time: f64,  // Time progressed since start
     mouse_pos: [f64; 2],
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs) {
+    fn render(&mut self, args: &RenderArgs, screen_texture: &mut Texture) {
         use graphics::*;
 
-        const WHITE: [f32; 4] = [1.0;4];
+        // const WHITE: [f32; 4] = [1.0;4];
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-
-        let square = rectangle::square(0.0, 0.0, 50.0);
-        let rotation = self.rotation;
-        let (x, y) = (args.window_size[0] / 2.0, args.window_size[1] / 2.0);
         
+        // Update screen texture with frame buffer pixel data
+        screen_texture.update(&self.frame_buffer);
+
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(BLACK, gl);
-            
-            let transform = c
-                .transform
-                .trans(x, y)
-                .rot_rad(rotation)
-                .trans(-25.0, -25.0);
 
-            // Draw a box rotating around the middle of the screen.
-            rectangle(WHITE, square, transform, gl);
+            // Draw image buffer
+            image(screen_texture, c.transform.scale(PIXEL_SCALE as f64, PIXEL_SCALE as f64), gl);
 
-            // Visualize mouse position
-            ellipse([1.0, 0.0, 0.0, 1.0], // currently red
-                [self.mouse_pos[0]-10.0, self.mouse_pos[1]-10.0, 20.0, 20.0], 
-                c.transform,
-                gl);
+            // DEMO: Visualize mouse position
+            // ellipse([1.0, 0.0, 0.0, 1.0], // currently red
+            //     [self.mouse_pos[0]-10.0, self.mouse_pos[1]-10.0, 20.0, 20.0], 
+            //     c.transform,
+            //     gl);
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
-        // Rotate 2 radians per second.
-        self.rotation += 2.0 * args.dt;
+        self.time += args.dt; // Update time
+
+        // FLUID LOGIC GOES HERE
+
+        // DEMO: Paint every pixel from top to bottom
+        // self.frame_buffer.put_pixel(
+        //     (self.time / args.dt) as u32 % self.frame_buffer.width(), 
+        //     (self.time / args.dt) as u32 / self.frame_buffer.width(), 
+        //     image::Rgba([2 * self.time as u8, 255, 255, 255])
+        // );
     }
 }
 
@@ -67,22 +71,25 @@ fn main() {
         .resizable(false)
         .build()
         .unwrap();
+    
+    // Create frame buffer that holds the pixel data before being rendered
+    let frame_buffer = image::ImageBuffer::from_pixel(WINDOW_WIDTH / PIXEL_SCALE, WINDOW_HEIGHT / PIXEL_SCALE, image::Rgba([0, 0, 0, 255]));
+    // Create screen texture that is rendered
+    let mut screen_texture = Texture::from_image(&frame_buffer, &TextureSettings::new().mag(Filter::Nearest));
 
     // Create app object
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        rotation: 0.0,
+        frame_buffer,
+        time: 0.0,
         mouse_pos: [0.0, 0.0],
     };
-
-    // let frame_buffer = image::ImageBuffer::from_pixel(WINDOW_WIDTH, WINDOW_HEIGHT, image::Rgba([0, 0, 0, 255]));
-    // let canvas = Texture::from_image(img, settings);
 
     // Event loop
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            app.render(&args);
+            app.render(&args, &mut screen_texture);
         }
 
         if let Some(args) = e.update_args() {
