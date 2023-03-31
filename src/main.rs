@@ -6,7 +6,7 @@ extern crate piston;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
+use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent, MouseCursorEvent};
 use piston::window::WindowSettings;
 
 const WINDOW_WIDTH: u32 = 1280;
@@ -15,6 +15,7 @@ const WINDOW_HEIGHT: u32 = 720;
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     rotation: f64,  // Rotation for the square.
+    mouse_pos: [f64; 2],
 }
 
 impl App {
@@ -40,6 +41,12 @@ impl App {
 
             // Draw a box rotating around the middle of the screen.
             rectangle(WHITE, square, transform, gl);
+
+            // Visualize mouse position
+            ellipse([1.0, 0.0, 0.0, 1.0], // currently red
+                [self.mouse_pos[0]-10.0, self.mouse_pos[1]-10.0, 20.0, 20.0], 
+                c.transform,
+                gl);
         });
     }
 
@@ -65,30 +72,11 @@ fn main() {
     let mut app = App {
         gl: GlGraphics::new(opengl),
         rotation: 0.0,
+        mouse_pos: [0.0, 0.0],
     };
 
-
-    //Mouse position
-    // *****Still having debugger issues so sorry for any issues!!!!! (to be removed)
-    let mut mouse_pos: [f64; 2] = [0.0, 0.0];
-
-    while let Some(event) = window.next() {
-        if let Some(pos) = event.mouse_cursor_args() {
-            mouse_pos = pos;
-        }
-        
-        window.draw_2d(&event, |context, graphics| {
-            // clear the screen 
-            clear([0.0, 0.0, 0.0, 1.0], graphics); 
-            
-            // create a circular hue at the current mouse position
-            ellipse([1.0, 0.0, 0.0, 1.0], // currently red
-                    [mouse_pos[0]-10.0, mouse_pos[1]-10.0, 20.0, 20.0], 
-                    context.transform,
-                    graphics);
-        });
-
-    }
+    // let frame_buffer = image::ImageBuffer::from_pixel(WINDOW_WIDTH, WINDOW_HEIGHT, image::Rgba([0, 0, 0, 255]));
+    // let canvas = Texture::from_image(img, settings);
 
     // Event loop
     let mut events = Events::new(EventSettings::new());
@@ -99,6 +87,10 @@ fn main() {
 
         if let Some(args) = e.update_args() {
             app.update(&args);
+        }
+
+        if let Some(pos) = e.mouse_cursor_args() {
+            app.mouse_pos = pos;
         }
     }
 }
