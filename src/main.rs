@@ -144,7 +144,7 @@ impl App {
     fn update(&mut self, args: &UpdateArgs) {
         self.time += args.dt; // Update time
 
-        // FLUID LOGIC GOES HERE
+        
 
         // DEMO: Paint every pixel from top to bottom
         // self.frame_buffer.put_pixel(
@@ -153,7 +153,7 @@ impl App {
         //     image::Rgba([2 * self.time as u8, 255, 255, 255])
         // );
 
-        // Add density and velocity (using the mouse position as an example)
+        // adding Density and Velocity 
         let x = (self.mouse_pos[0] / PIXEL_SCALE as f64) as usize;
         let y = (self.mouse_pos[1] / PIXEL_SCALE as f64) as usize;
         self.fluid.add_density(x, y, 100.0);
