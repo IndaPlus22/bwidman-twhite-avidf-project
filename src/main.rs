@@ -6,7 +6,7 @@ extern crate image;
 extern crate ndarray;
 //added
 use ndarray::{Array, Array2};
-use std::f64::consts::PI;
+
 
 
 use glutin_window::GlutinWindow as Window;
