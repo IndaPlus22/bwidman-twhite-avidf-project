@@ -4,11 +4,16 @@ extern crate opengl_graphics;
 extern crate piston;
 extern crate image;
 
+mod fluid_dynamics;
+
+use fluid_dynamics::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL, Texture, TextureSettings, Filter};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent, MouseCursorEvent};
 use piston::window::WindowSettings;
+
+type ImgBuffer = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
 
 const WINDOW_WIDTH: u32 = 500;
 const WINDOW_HEIGHT: u32 = 500;
@@ -16,9 +21,10 @@ const PIXEL_SCALE: u32 = 1; // How big every pixel should be (1 is normal)
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
-    frame_buffer: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+    frame_buffer: ImgBuffer,
     time: f64,  // Time progressed since start
     mouse_pos: [f64; 2],
+    fluid_properties: FluidProperties,
 }
 
 impl App {
@@ -49,8 +55,11 @@ impl App {
     fn update(&mut self, args: &UpdateArgs) {
         self.time += args.dt; // Update time
 
-        // FLUID LOGIC GOES HERE
-
+        // Decide color for every pixel
+        for (x, y, color) in self.frame_buffer.enumerate_pixels_mut() {
+            *color = fluid_dynamics(x, y, &self.fluid_properties);
+        }
+        
         // DEMO: Paint every pixel from top to bottom
         // self.frame_buffer.put_pixel(
         //     (self.time / args.dt) as u32 % self.frame_buffer.width(), 
@@ -83,6 +92,7 @@ fn main() {
         frame_buffer,
         time: 0.0,
         mouse_pos: [0.0, 0.0],
+        fluid_properties: FluidProperties::new(),
     };
 
     // Event loop
