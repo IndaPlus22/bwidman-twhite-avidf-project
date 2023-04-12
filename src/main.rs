@@ -11,8 +11,9 @@ use fluid_dynamics::*;
 use ndarray::{Array, Array2};
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL, Texture, TextureSettings, Filter};
+use piston::{Button, MouseButton, ButtonState};
 use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent, MouseCursorEvent};
+use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent, MouseCursorEvent, ButtonEvent, MouseRelativeEvent};
 use piston::window::WindowSettings;
 
 type ImgBuffer = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
@@ -24,8 +25,9 @@ const PIXEL_SCALE: u32 = 1; // How big every pixel should be (1 is normal)
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     frame_buffer: ImgBuffer,
-    time: f64,  // Time progressed since start
     mouse_pos: [f64; 2],
+    mouse_movement: [f64; 2],
+    left_mouse_state: ButtonState,
     fluid: Fluid,
 }
 
@@ -55,8 +57,6 @@ impl App {
     }
 
     fn update(&mut self, args: &UpdateArgs) {
-        self.time += args.dt; // Update time
-
         // DEMO: Paint every pixel from top to bottom
         // self.frame_buffer.put_pixel(
         //     (self.time / args.dt) as u32 % self.frame_buffer.width(), 
@@ -64,11 +64,13 @@ impl App {
         //     image::Rgba([2 * self.time as u8, 255, 255, 255])
         // );
 
-        // adding Density and Velocity 
-        let x = (self.mouse_pos[0] / PIXEL_SCALE as f64) as usize;
-        let y = (self.mouse_pos[1] / PIXEL_SCALE as f64) as usize;
-        self.fluid.add_density(x, y, 100.0);
-        self.fluid.add_velocity(x, y, 1.0, 1.0);
+        // Add density and velocity on cursor if mouse is pressed
+        if self.left_mouse_state == ButtonState::Press {
+            let x = (self.mouse_pos[0] / PIXEL_SCALE as f64) as usize;
+            let y = (self.mouse_pos[1] / PIXEL_SCALE as f64) as usize;
+            self.fluid.add_density(x, y, 100.0);
+            self.fluid.add_velocity(x, y, self.mouse_movement[0], self.mouse_movement[1]);
+        }
 
         // Perform fluid simulation step
         self.fluid.step(args.dt);
@@ -102,8 +104,9 @@ fn main() {
     let mut app = App {
         gl: GlGraphics::new(opengl),
         frame_buffer,
-        time: 0.0,
         mouse_pos: [0.0, 0.0],
+        mouse_movement: [0.0, 0.0],
+        left_mouse_state: ButtonState::Release,
         fluid: Fluid::new(0.1, 0.001),
     };
 
@@ -120,6 +123,16 @@ fn main() {
 
         if let Some(pos) = e.mouse_cursor_args() {
             app.mouse_pos = pos;
+        }
+
+        if let Some(movement) = e.mouse_relative_args() {
+            app.mouse_movement = movement;
+        }
+
+        if let Some(button) = e.button_args() {
+            if button.button == Button::Mouse(MouseButton::Left) {
+                app.left_mouse_state = button.state;
+            }
         }
     }
 }
