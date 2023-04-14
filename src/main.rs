@@ -1,20 +1,23 @@
 extern crate glutin_window;
 extern crate graphics;
-extern crate opengl_graphics;
-extern crate piston;
 extern crate image;
 extern crate ndarray;
+extern crate opengl_graphics;
+extern crate piston;
 
 mod fluid_dynamics;
 
 use fluid_dynamics::*;
-use ndarray::{Array, Array2};
 use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{GlGraphics, OpenGL, Texture, TextureSettings, Filter};
-use piston::{Button, MouseButton, ButtonState};
+use ndarray::{Array, Array2};
+use opengl_graphics::{Filter, GlGraphics, OpenGL, Texture, TextureSettings};
 use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent, MouseCursorEvent, ButtonEvent, MouseRelativeEvent};
+use piston::input::{
+    ButtonEvent, MouseCursorEvent, MouseRelativeEvent, RenderArgs, RenderEvent, UpdateArgs,
+    UpdateEvent,
+};
 use piston::window::WindowSettings;
+use piston::{Button, ButtonState, MouseButton};
 
 type ImgBuffer = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
 
@@ -37,7 +40,7 @@ impl App {
 
         // const WHITE: [f32; 4] = [1.0;4];
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-        
+
         // Update screen texture with frame buffer pixel data
         screen_texture.update(&self.frame_buffer);
 
@@ -46,11 +49,15 @@ impl App {
             clear(BLACK, gl);
 
             // Draw image buffer
-            image(screen_texture, c.transform.scale(PIXEL_SCALE as f64, PIXEL_SCALE as f64), gl);
+            image(
+                screen_texture,
+                c.transform.scale(PIXEL_SCALE as f64, PIXEL_SCALE as f64),
+                gl,
+            );
 
             // DEMO: Visualize mouse position
             // ellipse([1.0, 0.0, 0.0, 1.0], // currently red
-            //     [self.mouse_pos[0]-10.0, self.mouse_pos[1]-10.0, 20.0, 20.0], 
+            //     [self.mouse_pos[0]-10.0, self.mouse_pos[1]-10.0, 20.0, 20.0],
             //     c.transform,
             //     gl);
         });
@@ -59,8 +66,8 @@ impl App {
     fn update(&mut self, args: &UpdateArgs) {
         // DEMO: Paint every pixel from top to bottom
         // self.frame_buffer.put_pixel(
-        //     (self.time / args.dt) as u32 % self.frame_buffer.width(), 
-        //     (self.time / args.dt) as u32 / self.frame_buffer.width(), 
+        //     (self.time / args.dt) as u32 % self.frame_buffer.width(),
+        //     (self.time / args.dt) as u32 / self.frame_buffer.width(),
         //     image::Rgba([2 * self.time as u8, 255, 255, 255])
         // );
 
@@ -69,7 +76,8 @@ impl App {
             let x = (self.mouse_pos[0] / PIXEL_SCALE as f64) as usize;
             let y = (self.mouse_pos[1] / PIXEL_SCALE as f64) as usize;
             self.fluid.add_density(x, y, 100.0);
-            self.fluid.add_velocity(x, y, self.mouse_movement[0], self.mouse_movement[1]);
+            self.fluid
+                .add_velocity(x, y, self.mouse_movement[0], self.mouse_movement[1]);
         }
 
         // Perform fluid simulation step
@@ -94,11 +102,16 @@ fn main() {
         .resizable(false)
         .build()
         .unwrap();
-    
+
     // Create frame buffer that holds the pixel data before being rendered
-    let frame_buffer = image::ImageBuffer::from_pixel(WINDOW_WIDTH / PIXEL_SCALE, WINDOW_HEIGHT / PIXEL_SCALE, image::Rgba([0, 0, 0, 255]));
+    let frame_buffer = image::ImageBuffer::from_pixel(
+        WINDOW_WIDTH / PIXEL_SCALE,
+        WINDOW_HEIGHT / PIXEL_SCALE,
+        image::Rgba([0, 0, 0, 255]),
+    );
     // Create screen texture that is rendered
-    let mut screen_texture = Texture::from_image(&frame_buffer, &TextureSettings::new().mag(Filter::Nearest));
+    let mut screen_texture =
+        Texture::from_image(&frame_buffer, &TextureSettings::new().mag(Filter::Nearest));
 
     // Create app object
     let mut app = App {
