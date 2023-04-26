@@ -9,6 +9,8 @@ pub struct Fluid {
 }
 
 impl Fluid {
+
+    //Constructor for creating a new instance of Fluid struct.
     pub fn new(diffusion: f64, viscosity: f64) -> Self {
         Fluid {
             density: Array::zeros((SIM_WIDTH, SIM_HEIGHT)),
@@ -19,15 +21,18 @@ impl Fluid {
         }
     }
 
+    //Adds density at a specific grid point.
     pub fn add_density(&mut self, x: usize, y: usize, amount: f64) {
         self.density[[x, y]] += amount;
     }
 
+    //Adds velocity at a specific grid point.
     pub fn add_velocity(&mut self, x: usize, y: usize, amount_x: f64, amount_y: f64) {
         self.velocity_x[[x, y]] += amount_x;
         self.velocity_y[[x, y]] += amount_y;
     }
 
+    //Updates the fluid simulation state by one time step, which includes diffusion, advection, and projection steps.
     pub fn step(&mut self, dt: f64) {
         let velocity_x0 = self.velocity_x.clone();
         let velocity_y0 = self.velocity_y.clone();
@@ -49,6 +54,7 @@ impl Fluid {
     }
 }
 
+//Enforces the incompressibility condition on the velocity field.
 fn project(u: &mut Array2<f64>, v: &mut Array2<f64>) {
     let mut div = Array::zeros((SIM_WIDTH, SIM_HEIGHT));
     let mut p = Array::zeros((SIM_WIDTH, SIM_HEIGHT));
@@ -86,7 +92,7 @@ fn project(u: &mut Array2<f64>, v: &mut Array2<f64>) {
     }
 }
 
-
+//near solver for the iterative numerical solution of a system of linear equations.
 fn lin_solve(x: usize, y: usize, a: f64, c: f64, b: &mut Array2<f64>, x_prev: &Array2<f64>) {
     let a_inv = 1.0 / (1.0 + 4.0 * a);
     const ITERATIONS: usize = 20; // Can be changed depending on need
@@ -102,11 +108,13 @@ fn lin_solve(x: usize, y: usize, a: f64, c: f64, b: &mut Array2<f64>, x_prev: &A
     }
 }
 
+//Applies diffusion to the input field using the linear solver.
 fn diffuse(b: &mut Array2<f64>, x: &Array2<f64>, a: f64, dt: f64) {
     let a = dt * a * (SIM_WIDTH as f64 - 2.0) * (SIM_HEIGHT  as f64 - 2.0);
     lin_solve(1, 1, a, 1.0 + 4.0 * a, b, x);
 }
 
+//Updates the input field based on the velocity field, essentially moving the quantities around.
 fn advect(d: &mut Array2<f64>, d0: &Array2<f64>, veloc_x: &Array2<f64>, veloc_y: &Array2<f64>, dt: f64) {
     let dt0_x = dt * (SIM_WIDTH as f64 - 2.0);
     let dt0_y = dt * (SIM_HEIGHT as f64 - 2.0);
