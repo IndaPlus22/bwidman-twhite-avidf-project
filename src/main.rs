@@ -1,27 +1,15 @@
-// extern crate glutin_window;
-// extern crate graphics;
-// extern crate opengl_graphics;
-// extern crate piston;
 // extern crate image;
 extern crate piston_window;
-extern crate gfx;
+#[macro_use] extern crate gfx;
 extern crate ndarray;
 
 mod fluid_dynamics;
 
 use fluid_dynamics::*;
 use ndarray::{Array, Array2};
-// use glutin_window::GlutinWindow as Window;
-// use opengl_graphics::{Filter, GlGraphics, OpenGL, Texture, TextureSettings};
-// use piston::event_loop::{EventSettings, Events};
-// use piston::input::{ButtonEvent, MouseCursorEvent, MouseRelativeEvent, RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
-// use piston::window::WindowSettings;
-// use piston::{Button, ButtonState, MouseButton};
 
 use piston_window::*;
-use gfx::traits::*;
-
-// type ImgBuffer = image::ImageBuffer<image::Rgba<u8>, Vec<u8>>;
+use gfx::{traits::FactoryExt, Factory};
 
 // Dimensions of simulation
 const SIM_WIDTH: usize = 16;
@@ -32,8 +20,6 @@ const WINDOW_WIDTH: u32 = (SIM_WIDTH * PIXEL_SCALE) as u32;
 const WINDOW_HEIGHT: u32 = (SIM_HEIGHT * PIXEL_SCALE) as u32;
 
 pub struct App {
-    // gl: GlGraphics, // OpenGL drawing backend.
-    // frame_buffer: ImgBuffer,
     dt: f64,
     mouse_pos: [f64; 2],
     mouse_movement: [f64; 2],
@@ -42,38 +28,11 @@ pub struct App {
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs, /*screen_texture: &mut Texture*/) {
-        use graphics::*;
-        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-
-        // Update screen texture with frame buffer pixel data
-        // screen_texture.update(&self.frame_buffer);
-
+    fn render(&mut self, args: &RenderArgs) {
         self.dt = args.ext_dt; // Store time between rendered frames (dt in UpdateArgs uses time between monitor frames wtf)
-
-        // self.gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen.
-            // clear(BLACK, gl);
-
-            // Draw image buffer
-            // image(screen_texture, c.transform.scale(PIXEL_SCALE as f64, PIXEL_SCALE as f64), gl);
-            
-            // DEMO: Visualize mouse position
-            // ellipse([1.0, 0.0, 0.0, 1.0], // currently red
-            //     [self.mouse_pos[0]-10.0, self.mouse_pos[1]-10.0, 20.0, 20.0],
-            //     c.transform,
-            //     gl);
-        // });
     }
 
     fn update(&mut self, _args: &UpdateArgs) {
-        // DEMO: Paint every pixel from top to bottom
-        // self.frame_buffer.put_pixel(
-        //     (self.time / args.dt) as u32 % self.frame_buffer.width(),
-        //     (self.time / args.dt) as u32 / self.frame_buffer.width(),
-        //     image::Rgba([2 * self.time as u8, 255, 255, 255])
-        // );
-
         // Add density and velocity on cursor if mouse is pressed
         if self.left_mouse_state == ButtonState::Press {
             let x = (self.mouse_pos[0] / PIXEL_SCALE as f64) as usize;
@@ -84,18 +43,27 @@ impl App {
                 self.fluid.add_velocity(x, y, self.mouse_movement[0] / 10.0, self.mouse_movement[1] / 10.0);
             }
         }
-
-        // Perform fluid simulation step
-        // self.fluid.step(self.dt);
-
-        // Update the frame buffer with fluid density data
-        // for (x, y, pixel) in self.frame_buffer.enumerate_pixels_mut() {
-        //     let value = (self.fluid.density[[x as usize, y as usize]] * 255.0) as u8;
-        //     // println!("{}", value);
-        //     *pixel = image::Rgba([value, value, value, 255]);
-        // }
     }
 }
+
+gfx_defines!(
+    vertex Vertex {
+        pos: [f32; 4] = "a_Pos",
+    }
+
+    constant FluidProperties {
+        diffusion: f32 = "diffusion",
+        viscosity: f32 = "viscosity",
+    }
+
+    pipeline pipe {
+        vertex_buffer: gfx::VertexBuffer<Vertex> = (),
+        out_color: gfx::RenderTarget<gfx::format::Srgba8> = "o_Color",
+        t_density: gfx::TextureSampler<[f32; 4]> = "t_density",
+        t_velocity: gfx::TextureSampler<[f32; 4]> = "t_velocity",
+        t_fluid_properties: gfx::ConstantBuffer<FluidProperties> = "t_fluid_properties",
+    }
+);
 
 fn main() {
     let opengl = OpenGL::V3_2; // Change this to OpenGL::V2_1 if not working
@@ -107,17 +75,41 @@ fn main() {
         .resizable(false)
         .build()
         .unwrap();
+    
+    let pso = window.factory.create_pipeline_simple(
+        include_bytes!("basic.vert"), include_bytes!("fluid_dynamics.frag"), pipe::new()).unwrap();
 
-    // Create frame buffer that holds the pixel data before being rendered
-    // let frame_buffer = image::ImageBuffer::from_pixel(SIM_WIDTH as u32, SIM_HEIGHT as u32, image::Rgba([0, 0, 0, 255]));
+    const SCREEN_VERTICES: [Vertex; 4] = [
+        Vertex { pos: [ 1.0,  1.0, 0.0, 1.0] },
+        Vertex { pos: [-1.0, -1.0, 0.0, 1.0] },
+        Vertex { pos: [-1.0,  1.0, 0.0, 1.0] },
+        Vertex { pos: [ 1.0, -1.0, 0.0, 1.0] },
+    ];
+    const SCREEN_INDICES: &[u16] = &[
+        0, 1, 2,
+        0, 1, 3
+    ];
+    let (vertex_buffer, slice) = window.factory.create_vertex_buffer_with_slice(&SCREEN_VERTICES, SCREEN_INDICES);
 
-    // Create screen texture that is rendered
-    // let mut screen_texture = Texture::from_image(&frame_buffer, &TextureSettings::new().mag(Filter::Nearest));
+    let kind = gfx::texture::Kind::D2(SIM_WIDTH as u16, SIM_HEIGHT as u16, gfx::texture::AaMode::Single);
+
+    let (_, density_texture) = window.factory.create_texture_immutable::<gfx::format::Rgba32F>(kind, gfx::texture::Mipmap::Provided, 
+        &[&[[0u32; 4]; SIM_WIDTH * SIM_HEIGHT]]).unwrap();
+    let (_, velocity_texture) = window.factory.create_texture_immutable::<gfx::format::Rgba32F>(kind, gfx::texture::Mipmap::Provided, 
+        &[&[[0u32; 4]; SIM_WIDTH * SIM_HEIGHT]]).unwrap();
+
+    let tex_info = gfx::texture::SamplerInfo::new(gfx::texture::FilterMethod::Scale, gfx::texture::WrapMode::Clamp);
+
+    let data = pipe::Data {
+        vertex_buffer,
+        out_color: window.output_color.clone(),
+        t_density: (density_texture, window.factory.create_sampler(tex_info)),
+        t_velocity: (velocity_texture, window.factory.create_sampler(tex_info)),
+        t_fluid_properties: window.factory.create_constant_buffer(2),
+    };
 
     // Create app object
     let mut app = App {
-        // gl: GlGraphics::new(opengl),
-        // frame_buffer,
         dt: 0.0,
         mouse_pos: [0.0, 0.0],
         mouse_movement: [0.0, 0.0],
@@ -129,12 +121,12 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            app.render(&args, /* &mut screen_texture */);
-            window.draw_2d(&e, |c, g, _| {
-                clear([0.0,0.0,0.0,1.0], g);
-                ellipse([1.0, 0.0, 0.0, 1.0], [app.mouse_pos[0]-10.0, app.mouse_pos[1]-10.0, 20.0, 20.0], c.transform, g);
-            });
+            app.render(&args);
         }
+        window.draw_3d(&e, |window| {
+            window.encoder.clear(&window.output_color, [0.0, 0.0, 0.0, 1.0]);
+            window.encoder.draw(&slice, &pso, &data);
+        });
 
         if let Some(args) = e.update_args() {
             app.update(&args);
