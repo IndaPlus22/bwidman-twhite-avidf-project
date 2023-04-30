@@ -51,17 +51,14 @@ gfx_defines!(
         pos: [f32; 4] = "a_Pos",
     }
 
-    constant FluidProperties {
-        diffusion: f32 = "diffusion",
-        viscosity: f32 = "viscosity",
-    }
-
     pipeline pipe {
         vertex_buffer: gfx::VertexBuffer<Vertex> = (),
+        resolution: gfx::Global<[u32; 2]> = "resolution",
         out_color: gfx::RenderTarget<gfx::format::Srgba8> = "o_Color",
-        t_density: gfx::TextureSampler<[f32; 4]> = "t_density",
-        t_velocity: gfx::TextureSampler<[f32; 4]> = "t_velocity",
-        t_fluid_properties: gfx::ConstantBuffer<FluidProperties> = "t_fluid_properties",
+        density: gfx::TextureSampler<[f32; 4]> = "density",
+        velocity: gfx::TextureSampler<[f32; 4]> = "velocity",
+        diffusion: gfx::Global<f32> = "diffusion",
+        viscosity: gfx::Global<f32> = "viscosity",
     }
 );
 
@@ -100,12 +97,14 @@ fn main() {
 
     let tex_info = gfx::texture::SamplerInfo::new(gfx::texture::FilterMethod::Scale, gfx::texture::WrapMode::Clamp);
 
-    let data = pipe::Data {
+    let mut data = pipe::Data {
         vertex_buffer,
+        resolution: [WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32],
         out_color: window.output_color.clone(),
-        t_density: (density_texture, window.factory.create_sampler(tex_info)),
-        t_velocity: (velocity_texture, window.factory.create_sampler(tex_info)),
-        t_fluid_properties: window.factory.create_constant_buffer(2),
+        density: (density_texture, window.factory.create_sampler(tex_info)),
+        velocity: (velocity_texture, window.factory.create_sampler(tex_info)),
+        diffusion: 0.1,
+        viscosity: 0.001,
     };
 
     // Create app object
