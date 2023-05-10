@@ -38,10 +38,10 @@ impl App {
             format: format::Format(format::SurfaceType::R32_G32_B32_A32, format::ChannelType::Float),
             mipmap: 0,
         };
-        window.encoder.copy_texture_to_texture_raw(
-            self.density[0].raw(), None, img_info, 
-            self.density[1].raw(), None, img_info
-        ).unwrap();
+        // window.encoder.copy_texture_to_texture_raw(
+        //     self.density[0].raw(), None, img_info, 
+        //     self.density[1].raw(), None, img_info
+        // ).unwrap();
         
         // TODO: GUI rendering
     }
@@ -55,7 +55,7 @@ impl App {
             if x < SIM_WIDTH && y < SIM_HEIGHT {
                 // self.fluid.add_density(x, y, 0.2);
                 // self.fluid.add_velocity(x, y, self.mouse_movement[0] / 10.0, self.mouse_movement[1] / 10.0);
-                update_pixel(window, &self.density[1], x, y, [1.0 as u32; 4]);
+                // update_pixel(window, &self.density[1], x, y, [1.0 as u32; 4]);
             }
         }
     }
@@ -81,7 +81,7 @@ fn create_texture(window: &mut PistonWindow, usage: Usage, bind: Bind)
 {
     use format::*;
     use texture::*;
-    let kind = Kind::D2(SIM_WIDTH as u16, SIM_HEIGHT as u16, AaMode::Single);
+    let kind = Kind::D2(window.draw_size().width as u16, window.draw_size().height as u16, AaMode::Single);
 
     let texture = window.factory.create_texture::<R32_G32_B32_A32>(
         kind, 1, bind, usage, Some(ChannelType::Float)).unwrap();
@@ -116,7 +116,7 @@ gfx_defines!(
 );
 
 fn main() {
-    let opengl = OpenGL::V3_2; // Change this to OpenGL::V2_1 if not working
+    let opengl = OpenGL::V3_3; // Change this to OpenGL::V2_1 if not working
 
     // Create a Glutin window
     let mut window: PistonWindow = WindowSettings::new("Fluid simulator", [WINDOW_WIDTH, WINDOW_HEIGHT])
@@ -146,16 +146,17 @@ fn main() {
     let (vertex_buffer, slice) = window.factory.create_vertex_buffer_with_slice(&SCREEN_VERTICES, SCREEN_INDICES);
 
     // Create textures for storing per-pixel data
+    let size = window.draw_size();
     let out_density_handles = create_texture(&mut window, Usage::Data, Bind::SHADER_RESOURCE | Bind::RENDER_TARGET | Bind::TRANSFER_SRC);
     let out_velocity_handles = create_texture(&mut window, Usage::Data, Bind::SHADER_RESOURCE | Bind::RENDER_TARGET | Bind::TRANSFER_SRC);
-    
+
     let density_handles = create_texture(&mut window, Usage::Dynamic, Bind::SHADER_RESOURCE | Bind::TRANSFER_DST);
     let velocity_handles = create_texture(&mut window, Usage::Dynamic, Bind::SHADER_RESOURCE | Bind::TRANSFER_DST);
     
     // Create pipeline data object
     let data = pipe::Data {
         vertex_buffer,
-        resolution: [WINDOW_WIDTH as u32, WINDOW_HEIGHT as u32],
+        resolution: [size.width as u32, size.height as u32],
         dt: 0.0,
         density: (density_handles.1, density_handles.2),
         velocity: (velocity_handles.1, velocity_handles.2),
@@ -175,7 +176,9 @@ fn main() {
         density: [out_density_handles.0, density_handles.0],
         velocity: [out_velocity_handles.0, velocity_handles.0],
     };
-    
+    // unsafe { window.device.with_gl(|gl|{
+    //     gl.GetAttribLocation(program, name);
+    // }) };
     // Event loop
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
