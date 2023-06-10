@@ -109,6 +109,7 @@ version = "0.1.0"
 dependencies = [
  "gfx",
  "gfx_device_gl",
+ "gl 0.14.0",
  "piston_window",
 ]
 
@@ -452,6 +453,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b411c7e0bfc599e3606412c190e786b5bb48cf00073e1635f9bb6f88fe7d84a"
 dependencies = [
  "gl_generator 0.13.1",
+]
+
+[[package]]
+name = "gl"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a94edab108827d67608095e269cf862e60d920f144a5026d3dbcfd8b877fb404"
+dependencies = [
+ "gl_generator 0.14.0",
 ]
 
 [[package]]
@@ -1097,7 +1107,7 @@ version = "0.71.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65d2af5268a7c85093df16a0a749a7a043fc2bab2f4619114a682685f05b13a7"
 dependencies = [
- "gl",
+ "gl 0.13.0",
  "glutin",
  "glutin-winit",
  "pistoncore-input",

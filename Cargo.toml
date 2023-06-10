@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 gfx = "0.18.3"
 gfx_device_gl = "0.16.2"
+gl = "0.14.0"
 piston_window = "0.128.0"

@@ -2,6 +2,7 @@
 extern crate piston_window;
 #[macro_use] extern crate gfx;
 extern crate gfx_device_gl;
+extern crate gl;
 
 use piston_window::{*, texture::UpdateTexture};
 use gfx::{traits::FactoryExt, Factory, memory::{Bind, Usage, Typed}, handle, format, texture};
@@ -89,9 +90,9 @@ fn create_texture(window: &mut PistonWindow, usage: Usage, bind: Bind)
     let resource_view = window.factory.view_texture_as_shader_resource::<Rgba32F>(
         &texture, (0, 0), Swizzle::new()).unwrap();
     
-    let texture_info = SamplerInfo::new(FilterMethod::Scale, WrapMode::Clamp);
+    let sampler_info = SamplerInfo::new(FilterMethod::Scale, WrapMode::Clamp);
     
-    return (texture, resource_view, window.factory.create_sampler(texture_info))
+    return (texture, resource_view, window.factory.create_sampler(sampler_info))
 }
 
 gfx_defines!(
@@ -116,8 +117,8 @@ gfx_defines!(
 );
 
 fn main() {
-    let opengl = OpenGL::V3_3; // Change this to OpenGL::V2_1 if not working
-
+    let opengl = OpenGL::V4_3; // Change this to OpenGL::V2_1 if not working
+    
     // Create a Glutin window
     let mut window: PistonWindow = WindowSettings::new("Fluid simulator", [WINDOW_WIDTH, WINDOW_HEIGHT])
         .graphics_api(opengl)
@@ -147,12 +148,18 @@ fn main() {
 
     // Create textures for storing per-pixel data
     let size = window.draw_size();
+
+    // let kind = texture::Kind::D2(size.width as u16, size.height as u16, texture::AaMode::Single);
+    // let out_color_tex = window.factory.create_texture::<format::R8_G8_B8_A8>(
+    //     kind, 1, Bind::RENDER_TARGET | Bind::TRANSFER_SRC, Usage::Data, Some(format::ChannelType::Srgb)).unwrap();
+    
     let out_density_handles = create_texture(&mut window, Usage::Data, Bind::SHADER_RESOURCE | Bind::RENDER_TARGET | Bind::TRANSFER_SRC);
     let out_velocity_handles = create_texture(&mut window, Usage::Data, Bind::SHADER_RESOURCE | Bind::RENDER_TARGET | Bind::TRANSFER_SRC);
 
     let density_handles = create_texture(&mut window, Usage::Dynamic, Bind::SHADER_RESOURCE | Bind::TRANSFER_DST);
     let velocity_handles = create_texture(&mut window, Usage::Dynamic, Bind::SHADER_RESOURCE | Bind::TRANSFER_DST);
     
+    // window.output_color = window.factory.view_texture_as_render_target(&out_color_tex, 0, None).unwrap();
     // Create pipeline data object
     let data = pipe::Data {
         vertex_buffer,
@@ -166,6 +173,10 @@ fn main() {
         out_density: window.factory.view_texture_as_render_target(&out_density_handles.0, 0, None).unwrap(),
         out_velocity: window.factory.view_texture_as_render_target(&out_velocity_handles.0, 0, None).unwrap(),
     };
+    
+    // unsafe { window.device.with_gl(|gl|{
+    //     gl.Disable(gl::BLEND);
+    // }) };
 
     // Create app object
     let mut app = App {
@@ -176,9 +187,7 @@ fn main() {
         density: [out_density_handles.0, density_handles.0],
         velocity: [out_velocity_handles.0, velocity_handles.0],
     };
-    // unsafe { window.device.with_gl(|gl|{
-    //     gl.GetAttribLocation(program, name);
-    // }) };
+    
     // Event loop
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
